@@ -63,20 +63,18 @@ public class BasicConnectionPool implements ConnectionPool {
 
     private Connection createConnection() throws SQLException {
         Connection connection = DriverManager.getConnection(jdbcUrl, user, password);
-        InvocationHandler connectionHandler = (Object proxy, Method method, Object[] args) -> {
-            if (method.getName().equals("close")) {
-                releaseConnection((Connection) proxy);
-            }
-            return method.invoke(connection, args);
-        };
+        InvocationHandler connectionHandler = (Object proxy, Method method, Object[] args) ->
+                (method.getName().equals("close")) ?
+                        releaseConnection((Connection) proxy) : method.invoke(connection, args);
 
         return (Connection) Proxy.newProxyInstance(connection.getClass().getClassLoader(),
                 connection.getClass().getInterfaces(), connectionHandler);
     }
 
-    public void releaseConnection(Connection connection) {
+    public Object releaseConnection(Connection connection) {
         connectionDeque.push(connection);
         semaphore.release();
+        return null;
     }
 }
 
